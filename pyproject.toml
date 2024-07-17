@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "arachnida"
+version = "0.1.0"
+description = "Web Scrapping project for École 42"
+authors = ["Vinicius Oliveira <vgoncalv@student.42sp.org.br>"]
+license = "AGPL-3.0"
+readme = "README.md"
+packages = [{ include = "spider" }]
+classifiers = [
+	"Development Status :: 1 - Planning",
+	"Environment :: Console",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.11",
+	"License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+
+[tool.poetry.scripts]
+spider = "spider.__main__:main"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
