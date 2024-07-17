@@ -19,6 +19,8 @@ spider = "spider.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+pydantic = "^2.8.2"
+pydantic-settings = "^2.3.4"
 
 [build-system]
 requires = ["poetry-core"]

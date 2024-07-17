@@ -1,5 +1,9 @@
-def main():
-    print("Hello, World!")
+from spider.settings import SpiderSettings
+
+
+def main() -> None:
+    settings = SpiderSettings()
+    print(f"{settings=}")
 
 
 if __name__ == "__main__":
