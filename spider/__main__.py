@@ -6,6 +6,10 @@ from urllib.parse import urlparse
 
 import httpx
 
+logging.basicConfig(
+    format="%(asctime)s: %(levelname)s: %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
 
@@ -27,13 +31,17 @@ class SpiderNamespace(Namespace):
 
 
 class Spider:
-    def __init__(self, client: httpx.AsyncClient, urls: Iterable[URL] = set()) -> None:
+    def __init__(
+        self, client: httpx.AsyncClient, urls: Iterable[URL] = set(), max_workers=10
+    ) -> None:
         self.client = client
 
         self.urls = set(urls)
         self.seen: set[URL] = set()
         self.done: set[URL] = set()
+
         self.queue = asyncio.Queue()
+        self.max_workers = max_workers
 
     async def run(self) -> None:
         new_urls = self.urls - self.seen
@@ -42,7 +50,7 @@ class Spider:
         for url in new_urls:
             await self.queue.put(url)
 
-        workers = [asyncio.create_task(self.worker()) for _ in range(len(new_urls))]
+        workers = [asyncio.create_task(self.worker()) for _ in range(self.max_workers)]
         await self.queue.join()
 
         for worker in workers:
@@ -63,10 +71,10 @@ class Spider:
                 self.queue.task_done()
 
     async def crawl(self, url: URL) -> None:
-        print("Crawling URL: ", url)
+        logger.info("Crawling URL: ", url)
         response = await self.client.get(url)
         response.raise_for_status()
-        print(f"{url} - {response.status_code}")
+        logger.info(f"{url} - {response.status_code}")
         self.done.add(url)
 
 
