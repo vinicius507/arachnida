@@ -48,8 +48,9 @@ class ImageParser(html.parser.HTMLParser):
 
 
 class SpiderNamespace(Namespace):
-    url: URL
+    data_dir: Path
     extensions: str
+    urls: list[URL]
 
 
 class Spider:
