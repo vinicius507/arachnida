@@ -43,7 +43,8 @@ class ImageParser(html.parser.HTMLParser):
         for attr, value in attrs:
             if attr != "src":
                 continue
-            if urlparse(value).path.lower().endswith(self.extensions):
+            image_path = str(urlparse(value).path.lower())
+            if image_path.endswith(self.extensions):
                 self.found_images.add(urljoin(self.base_url, value))
 
 
