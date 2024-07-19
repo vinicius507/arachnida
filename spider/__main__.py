@@ -1,4 +1,5 @@
 import asyncio
+import html.parser
 import logging
 from argparse import ArgumentParser, Namespace
 from collections.abc import Iterable
@@ -26,13 +27,31 @@ class URL(str):
         return f"URL({super().__repr__()})"
 
 
+class ImageParser(html.parser.HTMLParser):
+    def __init__(self, base_url: str) -> None:
+        super().__init__()
+        self.base_url = base_url
+        self.found_images = set()
+
+    def handle_starttag(self, tag: str, attrs):
+        if tag != "img":
+            return
+        for attr, value in attrs:
+            if attr != "src":
+                continue
+            self.found_images.add(value)
+
+
 class SpiderNamespace(Namespace):
     url: URL
 
 
 class Spider:
     def __init__(
-        self, client: httpx.AsyncClient, urls: Iterable[URL] = set(), max_workers=10
+        self,
+        client: httpx.AsyncClient,
+        urls: Iterable[URL] = set(),
+        max_workers=10,
     ) -> None:
         self.client = client
 
@@ -73,8 +92,13 @@ class Spider:
     async def crawl(self, url: URL) -> None:
         logger.info("Crawling URL: ", url)
         response = await self.client.get(url)
+        parser = ImageParser(url)
+
+        parser.feed(response.text)
+
+        logger.info(parser.found_images)
+
         response.raise_for_status()
-        logger.info(f"{url} - {response.status_code}")
         self.done.add(url)
 
 
