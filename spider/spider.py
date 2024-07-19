@@ -17,7 +17,7 @@ class CrawlURL(tuple[URL, int]):
     url: URL
     depth: int = 0
 
-    def __new__(cls, url: URL, depth: int = 0):
+    def __new__(cls, url: URL, depth: int = 1):
         return super().__new__(cls, (url, depth))
 
 
