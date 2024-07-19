@@ -8,6 +8,8 @@ class SpiderNamespace(Namespace):
     data_dir: Path
     extensions: str
     urls: list[URL]
+    recursive: bool
+    limit: int
 
 
 def parse_args() -> SpiderNamespace:
@@ -31,5 +33,18 @@ def parse_args() -> SpiderNamespace:
         default="./data",
         type=Path,
         help="The path to save the images",
+    )
+    parser.add_argument(
+        "-r",
+        "--recursive",
+        action="store_true",
+        help="Recursively searches URLs for images",
+    )
+    parser.add_argument(
+        "-l",
+        "--limit",
+        default=5,
+        type=int,
+        help="The maximum depth level of the recursive image search",
     )
     return parser.parse_args(namespace=SpiderNamespace())

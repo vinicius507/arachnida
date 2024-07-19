@@ -1,14 +1,24 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
 import httpx
 
-from spider.parsers import ImageParser
+from spider.parsers import AnchorParser, ImageParser
 from spider.url import URL
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CrawlURL(tuple[URL, int]):
+    url: URL
+    depth: int = 0
+
+    def __new__(cls, url: URL, depth: int = 0):
+        return super().__new__(cls, (url, depth))
 
 
 class Spider:
@@ -18,26 +28,25 @@ class Spider:
         data_dir: Path,
         extensions: Iterable[str],
         urls: Iterable[URL] = set(),
-        max_workers=10,
+        max_depth: int = 5,
+        max_workers: int = 10,
+        recursive: bool = False,
     ) -> None:
         self.client = client
         self.data_dir = data_dir
         self.extensions = extensions
-        self.urls = set(urls)
-        self.seen: set[URL] = set()
-        self.done: set[URL] = set()
-        self.queue = asyncio.Queue()
+        self.urls: set[CrawlURL] = set(map(CrawlURL, urls))
+        self.seen: set[CrawlURL] = set()
+        self.done: set[CrawlURL] = set()
+        self.queue: asyncio.Queue[CrawlURL] = asyncio.Queue()
+        self.max_depth = max_depth
         self.max_workers = max_workers
+        self.recursive = recursive
 
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     async def run(self) -> None:
-        new_urls = self.urls - self.seen
-        self.seen.update(new_urls)
-
-        for url in new_urls:
-            await self.queue.put(url)
-
+        await self.on_found_links(self.urls)
         workers = [asyncio.create_task(self.worker()) for _ in range(self.max_workers)]
         await self.queue.join()
 
@@ -58,15 +67,36 @@ class Spider:
             finally:
                 self.queue.task_done()
 
-    async def crawl(self, url: URL) -> None:
-        logger.info("Crawling URL: %s", url)
-        res = await self.client.get(url)
+    async def crawl(self, crawl_url: CrawlURL) -> None:
+        logger.info("Crawling URL: %s", crawl_url)
+        res = await self.client.get(crawl_url.url)
+        url, depth = crawl_url
+
+        if self.recursive and depth < self.max_depth:
+            found_links = {
+                CrawlURL(link, depth + 1)
+                for link in self.parse_links(url, res.text)
+                if link not in self.done
+            }
+            await self.on_found_links(found_links)
 
         res.raise_for_status()
         found_images = self.parse_images(url, res.text)
         await asyncio.gather(*(self.download_image(src) for src in found_images))
 
-        self.done.add(url)
+        self.done.add(crawl_url)
+
+    def parse_links(self, base_url: URL, text: str) -> set[URL]:
+        parser = AnchorParser(base_url)
+        parser.feed(text)
+        return parser.found_links
+
+    async def on_found_links(self, links: set[CrawlURL]) -> None:
+        new_links = links - self.seen
+        self.seen.update(new_links)
+
+        for link in new_links:
+            await self.queue.put(link)
 
     def parse_images(self, base_url: URL, text: str) -> set[str]:
         parser = ImageParser(base_url, self.extensions)
