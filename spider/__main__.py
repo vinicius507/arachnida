@@ -5,10 +5,14 @@ import sys
 import httpx
 
 from spider.argparse import parse_args
+from spider.log import ColoredFormatter
 from spider.ratelimit import RateLimit
 from spider.spider import Spider
 
+stream_handler = logging.StreamHandler(sys.stderr)
+stream_handler.setFormatter(ColoredFormatter())
 logging.basicConfig(
+    handlers=[stream_handler],
     format="%(asctime)s: %(levelname)5s: %(name)s: %(message)s",
     level=logging.INFO,
 )
