@@ -19,6 +19,7 @@ spider = "spider.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+httpx = "^0.27.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,5 +1,12 @@
+import asyncio
+import logging
 from argparse import ArgumentParser, Namespace
+from collections.abc import Iterable
 from urllib.parse import urlparse
+
+import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class URL(str):
@@ -19,13 +26,74 @@ class SpiderNamespace(Namespace):
     url: URL
 
 
-def main() -> None:
+class Spider:
+    def __init__(self, client: httpx.AsyncClient, urls: Iterable[URL] = set()) -> None:
+        self.client = client
+
+        self.urls = set(urls)
+        self.seen: set[URL] = set()
+        self.done: set[URL] = set()
+        self.queue = asyncio.Queue()
+
+    async def run(self) -> None:
+        new_urls = self.urls - self.seen
+        self.seen.update(new_urls)
+
+        for url in new_urls:
+            await self.queue.put(url)
+
+        workers = [asyncio.create_task(self.worker()) for _ in range(len(new_urls))]
+        await self.queue.join()
+
+        for worker in workers:
+            worker.cancel()
+
+    async def worker(self):
+        while True:
+            url = await self.queue.get()
+            try:
+                await self.crawl(url)
+            except httpx.TimeoutException as e:
+                logger.warning(f"Timeout crawling {url}: {e}")
+            except httpx.HTTPError as e:
+                logger.error(f"Error crawling {url}: {e}")
+            except Exception as e:
+                logger.exception(f"Error crawling {url}: {e}")
+            finally:
+                self.queue.task_done()
+
+    async def crawl(self, url: URL) -> None:
+        print("Crawling URL: ", url)
+        response = await self.client.get(url)
+        response.raise_for_status()
+        print(f"{url} - {response.status_code}")
+        self.done.add(url)
+
+
+def parse_args() -> SpiderNamespace:
     parser = ArgumentParser(description="Extracts images from a given URL.")
 
-    parser.add_argument("url", type=URL, help="The URL to extract images from")
-    args = parser.parse_args(None, SpiderNamespace())
+    parser.add_argument(
+        "urls", nargs="*", type=URL, help="The URL to extract images from"
+    )
+    return parser.parse_args(namespace=SpiderNamespace())
 
-    print(args)
+
+async def start() -> None:
+    args = parse_args()
+    clientOptions = {
+        "follow_redirects": True,
+        "limits": httpx.Limits(max_connections=10, max_keepalive_connections=10),
+        "timeout": httpx.Timeout(3.0, connect=1.0),
+    }
+
+    async with httpx.AsyncClient(**clientOptions) as client:
+        spider = Spider(client, urls=args.urls)
+        await spider.run()
+
+
+def main() -> None:
+    asyncio.run(start())
 
 
 if __name__ == "__main__":
