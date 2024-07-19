@@ -106,7 +106,7 @@ def parse_args() -> SpiderNamespace:
     parser = ArgumentParser(description="Extracts images from a given URL.")
 
     parser.add_argument(
-        "urls", nargs="*", type=URL, help="The URL to extract images from"
+        "urls", nargs="+", type=URL, help="The URL to extract images from"
     )
     return parser.parse_args(namespace=SpiderNamespace())
 
