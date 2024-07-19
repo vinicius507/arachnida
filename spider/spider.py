@@ -63,12 +63,12 @@ class Spider:
         res = await self.client.get(url)
 
         res.raise_for_status()
-        found_images = self.parse_imgs(url, res.text)
+        found_images = self.parse_images(url, res.text)
         await asyncio.gather(*(self.download_image(src) for src in found_images))
 
         self.done.add(url)
 
-    def parse_imgs(self, base_url: URL, text: str) -> set[str]:
+    def parse_images(self, base_url: URL, text: str) -> set[str]:
         parser = ImageParser(base_url, self.extensions)
         parser.feed(text)
         return parser.found_images
