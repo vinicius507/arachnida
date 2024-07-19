@@ -101,7 +101,7 @@ class Spider:
                 self.queue.task_done()
 
     async def crawl(self, url: URL) -> None:
-        logger.info("Crawling URL: ", url)
+        logger.info("Crawling URL: %s", url)
         res = await self.client.get(url)
 
         res.raise_for_status()
