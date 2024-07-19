@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 
 from spider.url import URL
@@ -13,7 +13,10 @@ class SpiderNamespace(Namespace):
 
 
 def parse_args() -> SpiderNamespace:
-    parser = ArgumentParser(description="Extracts images from a given URL.")
+    parser = ArgumentParser(
+        description="Extracts images from a given URL.",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
 
     parser.add_argument(
         "urls",
