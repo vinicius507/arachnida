@@ -1,7 +1,7 @@
 # Arachnida
 
 ![Language](https://img.shields.io/badge/Language-Python-blue.svg)
-![License](https://img.shields.io/badge/License-AGPL-3.0-blue.svg)
+![License](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)
 ![Version](https://img.shields.io/badge/Version-0.1-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Development-blue.svg)
 
