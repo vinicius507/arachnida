@@ -1,9 +1,9 @@
 import asyncio
 import html.parser
 import logging
+import urllib.parse
 from argparse import ArgumentParser, Namespace
 from collections.abc import Iterable
-from urllib.parse import urlparse
 
 import httpx
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class URL(str):
     def __new__(cls, url: str) -> "URL":
-        if not urlparse(url).scheme:
+        if not urllib.parse.urlparse(url).scheme:
             raise ValueError(f"Invalid URL: {url}")
         return super().__new__(cls, url)
 
@@ -39,7 +39,7 @@ class ImageParser(html.parser.HTMLParser):
         for attr, value in attrs:
             if attr != "src":
                 continue
-            self.found_images.add(value)
+            self.found_images.add(urllib.parse.urljoin(self.base_url, value))
 
 
 class SpiderNamespace(Namespace):
@@ -96,7 +96,7 @@ class Spider:
 
         parser.feed(response.text)
 
-        logger.info(parser.found_images)
+        logger.info("Found images for %s: %s", url, parser.found_images)
 
         response.raise_for_status()
         self.done.add(url)
