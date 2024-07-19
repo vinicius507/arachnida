@@ -1,9 +1,10 @@
 import asyncio
 import html.parser
 import logging
-import urllib.parse
 from argparse import ArgumentParser, Namespace
 from collections.abc import Iterable
+from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class URL(str):
     def __new__(cls, url: str) -> "URL":
-        if not urllib.parse.urlparse(url).scheme:
+        if not urlparse(url).scheme:
             raise ValueError(f"Invalid URL: {url}")
         return super().__new__(cls, url)
 
@@ -31,7 +32,7 @@ class ImageParser(html.parser.HTMLParser):
     def __init__(self, base_url: str) -> None:
         super().__init__()
         self.base_url = base_url
-        self.found_images = set()
+        self.found_images: set[str] = set()
 
     def handle_starttag(self, tag: str, attrs):
         if tag != "img":
@@ -39,7 +40,7 @@ class ImageParser(html.parser.HTMLParser):
         for attr, value in attrs:
             if attr != "src":
                 continue
-            self.found_images.add(urllib.parse.urljoin(self.base_url, value))
+            self.found_images.add(urljoin(self.base_url, value))
 
 
 class SpiderNamespace(Namespace):
@@ -50,17 +51,19 @@ class Spider:
     def __init__(
         self,
         client: httpx.AsyncClient,
+        data_dir: Path,
         urls: Iterable[URL] = set(),
         max_workers=10,
     ) -> None:
         self.client = client
-
+        self.data_dir = data_dir.resolve()
         self.urls = set(urls)
         self.seen: set[URL] = set()
         self.done: set[URL] = set()
-
         self.queue = asyncio.Queue()
         self.max_workers = max_workers
+
+        self.data_dir.mkdir(parents=True, exist_ok=True)
 
     async def run(self) -> None:
         new_urls = self.urls - self.seen
@@ -91,15 +94,30 @@ class Spider:
 
     async def crawl(self, url: URL) -> None:
         logger.info("Crawling URL: ", url)
-        response = await self.client.get(url)
-        parser = ImageParser(url)
+        res = await self.client.get(url)
 
-        parser.feed(response.text)
+        res.raise_for_status()
+        found_images = self.parse_imgs(url, res.text)
+        await asyncio.gather(*(self.download_image(src) for src in found_images))
 
-        logger.info("Found images for %s: %s", url, parser.found_images)
-
-        response.raise_for_status()
         self.done.add(url)
+
+    def parse_imgs(self, base_url: URL, text: str) -> set[str]:
+        parser = ImageParser(base_url)
+        parser.feed(text)
+        return parser.found_images
+
+    async def download_image(self, src: str):
+        filename = src.split("/")[-1].split("?")[0].split("#")[0]
+        filepath = f"{self.data_dir}/{filename}"
+
+        logger.info("Downloading image: %s", src)
+        res = await self.client.get(src)
+        res.raise_for_status()
+        with open(filepath, "wb") as f:
+            f.write(res.content)
+
+        logger.info("Downloaded image: %s", src)
 
 
 def parse_args() -> SpiderNamespace:
@@ -107,6 +125,9 @@ def parse_args() -> SpiderNamespace:
 
     parser.add_argument(
         "urls", nargs="+", type=URL, help="The URL to extract images from"
+    )
+    parser.add_argument(
+        "--path", default="./data", type=Path, help="The path to save the images"
     )
     return parser.parse_args(namespace=SpiderNamespace())
 
@@ -120,7 +141,7 @@ async def start() -> None:
     }
 
     async with httpx.AsyncClient(**clientOptions) as client:
-        spider = Spider(client, urls=args.urls)
+        spider = Spider(client, urls=args.urls, data_dir=args.path)
         await spider.run()
 
 
