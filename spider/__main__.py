@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 
 import httpx
 
@@ -22,7 +23,14 @@ async def start() -> None:
         "limits": httpx.Limits(max_connections=10, max_keepalive_connections=10),
         "timeout": httpx.Timeout(3.0, connect=1.0),
     }
+    data_dir = args.path.resolve()
     extensions = args.extensions.split(",") if args.extensions else DEFAULT_EXTENSIONS
+
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.error("Error creating data directory %s: %s", data_dir, e)
+        sys.exit(1)
 
     async with httpx.AsyncClient(**clientOptions) as client:
         spider = Spider(

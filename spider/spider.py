@@ -1,4 +1,5 @@
-import asyncio, logging
+import asyncio
+import logging
 from pathlib import Path
 from typing import Iterable
 
@@ -20,7 +21,7 @@ class Spider:
         max_workers=10,
     ) -> None:
         self.client = client
-        self.data_dir = data_dir.resolve()
+        self.data_dir = data_dir
         self.extensions = extensions
         self.urls = set(urls)
         self.seen: set[URL] = set()
