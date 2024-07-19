@@ -14,6 +14,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+DEFAULT_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
+
 
 class URL(str):
     def __new__(cls, url: str) -> "URL":
@@ -29,9 +31,10 @@ class URL(str):
 
 
 class ImageParser(html.parser.HTMLParser):
-    def __init__(self, base_url: str) -> None:
+    def __init__(self, base_url: str, extensions: Iterable[str]) -> None:
         super().__init__()
         self.base_url = base_url
+        self.extensions = tuple(extensions)
         self.found_images: set[str] = set()
 
     def handle_starttag(self, tag: str, attrs):
@@ -40,11 +43,13 @@ class ImageParser(html.parser.HTMLParser):
         for attr, value in attrs:
             if attr != "src":
                 continue
-            self.found_images.add(urljoin(self.base_url, value))
+            if urlparse(value).path.lower().endswith(self.extensions):
+                self.found_images.add(urljoin(self.base_url, value))
 
 
 class SpiderNamespace(Namespace):
     url: URL
+    extensions: str
 
 
 class Spider:
@@ -52,11 +57,13 @@ class Spider:
         self,
         client: httpx.AsyncClient,
         data_dir: Path,
+        extensions: Iterable[str],
         urls: Iterable[URL] = set(),
         max_workers=10,
     ) -> None:
         self.client = client
         self.data_dir = data_dir.resolve()
+        self.extensions = extensions
         self.urls = set(urls)
         self.seen: set[URL] = set()
         self.done: set[URL] = set()
@@ -103,7 +110,7 @@ class Spider:
         self.done.add(url)
 
     def parse_imgs(self, base_url: URL, text: str) -> set[str]:
-        parser = ImageParser(base_url)
+        parser = ImageParser(base_url, self.extensions)
         parser.feed(text)
         return parser.found_images
 
@@ -124,10 +131,23 @@ def parse_args() -> SpiderNamespace:
     parser = ArgumentParser(description="Extracts images from a given URL.")
 
     parser.add_argument(
-        "urls", nargs="+", type=URL, help="The URL to extract images from"
+        "urls",
+        nargs="+",
+        type=URL,
+        help="The URL to extract images from",
     )
     parser.add_argument(
-        "--path", default="./data", type=Path, help="The path to save the images"
+        "-e",
+        "--extensions",
+        type=str,
+        help="Comma separated list of image extensions to download",
+    )
+    parser.add_argument(
+        "-p",
+        "--path",
+        default="./data",
+        type=Path,
+        help="The path to save the images",
     )
     return parser.parse_args(namespace=SpiderNamespace())
 
@@ -139,9 +159,15 @@ async def start() -> None:
         "limits": httpx.Limits(max_connections=10, max_keepalive_connections=10),
         "timeout": httpx.Timeout(3.0, connect=1.0),
     }
+    extensions = args.extensions.split(",") if args.extensions else DEFAULT_EXTENSIONS
 
     async with httpx.AsyncClient(**clientOptions) as client:
-        spider = Spider(client, urls=args.urls, data_dir=args.path)
+        spider = Spider(
+            client,
+            extensions=extensions,
+            urls=args.urls,
+            data_dir=args.path,
+        )
         await spider.run()
 
 
