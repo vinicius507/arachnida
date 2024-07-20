@@ -9,13 +9,9 @@ from spider.log import ColoredFormatter
 from spider.ratelimit import RateLimit
 from spider.spider import Spider
 
-stream_handler = logging.StreamHandler(sys.stderr)
-stream_handler.setFormatter(ColoredFormatter())
-logging.basicConfig(
-    handlers=[stream_handler],
-    format="%(asctime)s: %(levelname)5s: %(name)s: %(message)s",
-    level=logging.INFO,
-)
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(ColoredFormatter())
+logging.basicConfig(handlers=[handler], level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DEFAULT_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
