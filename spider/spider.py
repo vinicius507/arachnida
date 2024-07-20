@@ -62,11 +62,9 @@ class Spider:
             try:
                 await self.crawl(url)
             except httpx.TimeoutException as e:
-                logger.warning(f"Timeout crawling {url}: {e}")
-            except httpx.HTTPError as e:
-                logger.error(f"Error crawling {url}: {e}")
+                logger.warning("Timeout crawling %s: %s", url, e)
             except Exception as e:
-                logger.exception(f"Error crawling {url}: {e}")
+                logger.exception("Error crawling %s: %s", url, e)
             finally:
                 self.queue.task_done()
 
@@ -99,6 +97,8 @@ class Spider:
         self.seen.update(new_links)
 
         for link in new_links:
+            if urlparse(link.url).scheme not in ("http", "https"):
+                continue
             await self.queue.put(link)
 
     def parse_images(self, base_url: URL, text: str) -> set[str]:
