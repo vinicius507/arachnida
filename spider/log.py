@@ -18,7 +18,7 @@ class ColoredFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        log_fmt = "%(asctime)s: {level}: %(filename)s: %(message)s"
+        log_fmt = "%(asctime)s: {level}: %(name)s: %(message)s"
         log_fmt = log_fmt.format(
             level=self.FORMATS.get(record.levelno, self.FORMATS[logging.DEBUG])
         )
