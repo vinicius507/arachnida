@@ -12,12 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 def report_metadata(metadata: ImageMetadata):
-    print(f"\nFile: {metadata.file_name}")
-    print(f"File size: {metadata.file_size} bytes")
+    bold_green = "\033[1;32m"
+    bold_yellow = "\033[1;33m"
+    reset = "\033[0m"
+
+    print(f"\n{bold_green}File:{reset} {metadata.file_name}")
+    print(f"{bold_green}File size:{reset} {metadata.file_size} bytes")
 
     if not metadata.exif_tags:
+        print(f"{bold_yellow}No EXIF tags found{reset}")
         return
-    print("EXIF tags:")
+    print(bold_green + "EXIF tags:" + reset)
     for tag, value in metadata.exif_tags.items():
         print(f"  {tag}: {value}")
 
