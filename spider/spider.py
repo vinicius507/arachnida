@@ -1,9 +1,10 @@
 import asyncio
 import logging
-import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlparse
 
 import filetype
 import httpx
@@ -70,7 +71,7 @@ class Spider:
                 self.queue.task_done()
 
     async def crawl(self, crawl_url: CrawlURL) -> None:
-        logger.info("Crawling URL: %s", crawl_url)
+        logger.debug("Crawling URL: %s", crawl_url)
         res = await self.client.get(crawl_url.url)
         url, depth = crawl_url
 
@@ -84,7 +85,7 @@ class Spider:
 
         res.raise_for_status()
         found_images = self.parse_images(url, res.text)
-        await asyncio.gather(*(self.download_image(src) for src in found_images))
+        await asyncio.gather(*(self.download_image(url, src) for src in found_images))
 
         self.done.add(crawl_url)
 
@@ -105,10 +106,7 @@ class Spider:
         parser.feed(text)
         return parser.found_images
 
-    async def download_image(self, src: str):
-        filename = src.split("/")[-1].split("?")[0].split("#")[0]
-        filepath = f"{self.data_dir}/{filename}"
-
+    async def download_image(self, url: URL, src: str):
         logger.info("Downloading image: %s", src)
         res = await self.client.get(src)
         res.raise_for_status()
@@ -120,10 +118,16 @@ class Spider:
             return
 
         if kind.extension not in self.extensions:
-            logger.debug("Dropping image due to unregistered extension: %s", src)
+            logger.warning("Unregistered image extension: %s", kind.extension)
             return
 
-        with open(filepath, "wb") as f:
+        filename = urlparse(src).path.split("/")[-1].split(".")[0]
+        filename = filename + "_" + datetime.today().strftime("%Y%m%d-%H%M%S")
+        filename = f"{filename}.{kind.extension}"
+        if hostname := urlparse(url).hostname:
+            filename = f"{hostname}_{filename}"
+
+        with Path(self.data_dir, filename).open(mode="wb") as f:
             f.write(res.content)
 
         logger.info("Downloaded image: %s", src)
