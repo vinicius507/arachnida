@@ -23,6 +23,9 @@ class CrawlURL(tuple[URL, int]):
     def __new__(cls, url: URL, depth: int = 1):
         return super().__new__(cls, (url, depth))
 
+    def __str__(self):
+        return self.url
+
 
 class Spider:
     def __init__(
