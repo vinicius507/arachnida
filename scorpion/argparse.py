@@ -1,12 +1,13 @@
-from argparse import ArgumentParser, FileType, Namespace
-from typing import BinaryIO
+from argparse import ArgumentParser, Namespace
+
+from scorpion.image import Image
 
 
 class ScorpionNamespace(Namespace):
-    files: list[BinaryIO]
+    files: list[Image]
 
 
-def parse_args():
+def parse_args() -> ScorpionNamespace:
     parser = ArgumentParser()
-    parser.add_argument("files", nargs="+", type=FileType("rb"))
+    parser.add_argument("files", nargs="+", type=Image)
     return parser.parse_args(namespace=ScorpionNamespace())

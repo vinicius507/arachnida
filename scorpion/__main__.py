@@ -1,13 +1,8 @@
 import logging
-import os
 import sys
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, BinaryIO
-
-import exifread
 
 from scorpion.argparse import parse_args
+from scorpion.image import ImageMetadata
 from scorpion.log import ColoredFormatter
 
 handler = logging.StreamHandler(sys.stderr)
@@ -16,41 +11,32 @@ logging.basicConfig(handlers=[handler], level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class MetaData:
-    file_name: str
-    file_size: int
-    exif_tags: dict[str, Any]
+def report_metadata(metadata: ImageMetadata):
+    print(f"File: {metadata.file_name}")
+    print(f"File size: {metadata.file_size} bytes")
 
-
-SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
-
-
-def parse_metadata(file: BinaryIO) -> MetaData:
-    exif_tags = exifread.process_file(file)
-
-    return MetaData(
-        file_name=file.name,
-        file_size=file.seek(0, os.SEEK_END),
-        exif_tags=exif_tags,
-    )
+    if not metadata.exif_tags:
+        return
+    print("EXIF tags:")
+    for tag, value in metadata.exif_tags.items():
+        print(f"  {tag}: {value}")
 
 
 def main():
     args = parse_args()
+    images_metadata: list[ImageMetadata] = list()
 
-    for file in args.files:
-        file_name = Path(file.name).resolve(strict=True)
-        logging.info("Processing file: %s", file_name)
-        extname = file_name.suffix
+    for image in args.files:
+        logging.info("Processing file: %s", image)
 
-        if extname not in SUPPORTED_EXTENSIONS:
-            logging.warning("Unsupported file extension: %s", extname)
-            continue
+        try:
+            metadata = ImageMetadata.from_image(image)
+            images_metadata.append(metadata)
+        except ValueError as e:
+            logging.error(e)
 
-        metadata = parse_metadata(file)
-        logging.info("Image metadata: %s", metadata)
-        file.close()
+    for metadata in images_metadata:
+        report_metadata(metadata)
 
 
 if __name__ == "__main__":
