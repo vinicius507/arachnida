@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def report_metadata(metadata: ImageMetadata):
-    print(f"File: {metadata.file_name}")
+    print(f"\nFile: {metadata.file_name}")
     print(f"File size: {metadata.file_size} bytes")
 
     if not metadata.exif_tags:

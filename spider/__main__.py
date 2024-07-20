@@ -14,7 +14,7 @@ handler.setFormatter(ColoredFormatter())
 logging.basicConfig(handlers=[handler], level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
+DEFAULT_EXTENSIONS = ("jpg", "jpeg", "png", "gif", "bmp")
 
 
 async def start() -> None:

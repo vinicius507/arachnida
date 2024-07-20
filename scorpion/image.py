@@ -4,14 +4,18 @@ from pathlib import Path
 from typing import Any
 
 import exifread
+from filetype import filetype
 
-SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
+SUPPORTED_EXTENSIONS = ("jpg", "jpeg", "png", "gif", "bmp")
 
 
 class Image:
     def __init__(self, path: str):
-        if (ext := Path(path).suffix) not in SUPPORTED_EXTENSIONS:
-            raise ValueError(f"Unsupported file extension: {ext}")
+        kind = filetype.guess(path)
+        if not kind:
+            raise ValueError(f"Could not determine file type for {path}")
+        if kind.extension not in SUPPORTED_EXTENSIONS:
+            raise ValueError(f"Unsupported file extension: {kind.extension}")
 
         self.file_path = Path(path).resolve(strict=True)
 

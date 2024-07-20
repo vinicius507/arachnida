@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import filetype
 import httpx
 
 from spider.parsers import AnchorParser, ImageParser
@@ -99,7 +101,7 @@ class Spider:
             await self.queue.put(link)
 
     def parse_images(self, base_url: URL, text: str) -> set[str]:
-        parser = ImageParser(base_url, self.extensions)
+        parser = ImageParser(base_url)
         parser.feed(text)
         return parser.found_images
 
@@ -110,6 +112,17 @@ class Spider:
         logger.info("Downloading image: %s", src)
         res = await self.client.get(src)
         res.raise_for_status()
+
+        kind = filetype.guess(res.content)
+
+        if kind is None:
+            logger.error("Could not determine image filetype: %s", src)
+            return
+
+        if kind.extension not in self.extensions:
+            logger.debug("Dropping image due to unregistered extension: %s", src)
+            return
+
         with open(filepath, "wb") as f:
             f.write(res.content)
 
