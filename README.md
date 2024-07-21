@@ -66,4 +66,17 @@ options:
 
 ### Scorpion
 
-Work in progress...
+The `scorpion` command is used to handle image metadata. The following options
+are available:
+
+```bash
+usage: scorpion [-h] files [files ...]
+
+Handle images metadata with ease.
+
+positional arguments:
+  files       Image files to handle.
+
+options:
+  -h, --help  show this help message and exit
+```
