@@ -18,6 +18,7 @@ def report_metadata(metadata: ImageMetadata):
 
     print(f"\n{bold_green}File:{reset} {metadata.file_name}")
     print(f"{bold_green}File size:{reset} {metadata.file_size} bytes")
+    print(f"{bold_green}Create Time:{reset} {metadata.create_time}")
 
     if not metadata.exif_tags:
         print(f"{bold_yellow}No EXIF tags found{reset}")
