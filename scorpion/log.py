@@ -11,14 +11,14 @@ class ColoredFormatter(logging.Formatter):
 
     FORMATS = {
         logging.DEBUG: grey + "DEBUG" + reset,
-        logging.INFO: green + " INFO" + reset,
-        logging.WARNING: yellow + " WARN" + reset,
+        logging.INFO: green + "INFO" + reset,
+        logging.WARNING: yellow + "WARN" + reset,
         logging.ERROR: red + "ERROR" + reset,
         logging.CRITICAL: bold_red + "CRIT" + reset,
     }
 
     def format(self, record):
-        log_fmt = "%(asctime)s: {level}: %(name)s: %(message)s"
+        log_fmt = "{level}: %(name)s: %(message)s"
         log_fmt = log_fmt.format(
             level=self.FORMATS.get(record.levelno, self.FORMATS[logging.DEBUG])
         )
