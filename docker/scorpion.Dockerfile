@@ -44,4 +44,3 @@ COPY pyproject.toml poetry.lock ./
 COPY ./scorpion ./scorpion
 
 ENTRYPOINT [ "python", "-m", "scorpion" ]
-
